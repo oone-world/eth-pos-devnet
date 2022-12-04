@@ -14,14 +14,14 @@ services:
     image: "ethereum/client-go:latest"
     command:
       - --http
-      - --http.api=eth
+      - --http.api=eth,net,web3,personal,miner
       - --http.addr=0.0.0.0
       - --authrpc.vhosts=*
       - --authrpc.addr=0.0.0.0
       - --authrpc.jwtsecret=/execution/jwtsecret
       - --datadir=/execution
       - --allow-insecure-unlock
-      - --unlock=0x123463a4b065722e99115d6c222f267d9cabb524
+      - --unlock=0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f
       - --password=/execution/geth_password.txt
       - --nodiscover
       - --syncmode=full
@@ -73,7 +73,7 @@ services:
       - --chain-id=32382
       - --accept-terms-of-use
       - --jwt-secret=/execution/jwtsecret
-      - --suggested-fee-recipient=0x123463a4b065722e99115d6c222f267d9cabb524
+      - --suggested-fee-recipient=0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f
     depends_on:
       geth:
         condition: service_started
