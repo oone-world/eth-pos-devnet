@@ -8,4 +8,11 @@ echo
 
 export bootbeacon=`curl http://localhost:8080/p2p 2>/dev/null | grep self= | sed s/',\\'/'ip4.*'//g | sed s/'self='//g` \
         && echo export bootbeacon=$bootbeacon
+echo
 
+export bootipfs=/ip4/${server_ip}/tcp/4001/ipfs/`ipfs id|grep \"ID\"|sed s/'.*\"ID\": \"'//|sed s/'\",$'//` \
+	&& echo export bootipfs=$bootipfs
+echo
+
+export bootipfscluster=/ip4/${server_ip}/tcp/9096/ipfs/`ipfs-cluster-ctl id | grep IPFS | sed s/'.*IPFS: '//g` \
+	&& echo export bootipfscluster=$bootipfscluster
