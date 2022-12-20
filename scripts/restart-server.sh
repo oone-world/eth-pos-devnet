@@ -21,6 +21,7 @@ docker compose -f docker-run.yml up validator -d
 
 # Write node info
 scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt
+cp consensus/genesis.ssz /var/www/html/adigium/ 
 
 # Show Log Commands
 echo You can watch the log file
