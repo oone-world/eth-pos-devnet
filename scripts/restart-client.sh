@@ -44,7 +44,7 @@ tar xzf staking_deposit-cli-76ed782-linux-amd64.tar.gz
 cp staking_deposit-cli-76ed782-linux-amd64/deposit .
 rm -rf staking_deposit-cli-76ed782-linux-amd64*
 
-#./deposit --language English new-mnemonic --mnemonic_language English --num_validators 64 --chain mainnet
+./deposit --language English new-mnemonic --mnemonic_language English --chain mainnet || echo Skipped Depost
 
 echo {\"keys\":$(cat `ls -rt validator_keys/deposit_data* | tail -n 1`), \"address\":\"$account_geth_address\", \"privateKey\": \"$account_geth_privateKey\"} > validator_keys/payload.txt
 
