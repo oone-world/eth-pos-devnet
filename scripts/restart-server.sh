@@ -1,3 +1,4 @@
+set -e 
 cd /home/adigium/eth-pos-devnet/
 
 docker compose down
