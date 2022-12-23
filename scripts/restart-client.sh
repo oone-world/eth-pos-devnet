@@ -9,7 +9,11 @@ rm -rf consensus/beacondata/ consensus/genesis.ssz consensus/validatordata/ exec
 
 # Get BootNode info
 curl http://adg.adigium.com:3003/collectNodeInfo.php > .env
-curl http://adg.adigium.com:3003/getBeaconGenesis.php > consensus/genesis.ssz || exit
+#curl http://adg.adigium.com:3003/getBeaconGenesis.php > consensus/genesis.ssz || exit
+rm -f getBeaconGenesis.php
+wget http://adg.adigium.com:3003/getBeaconGenesis.php
+mv getBeaconGenesis.php consensus/genesis.ssz
+
 
 # Initialize Genesis
 docker compose -f docker-initialize.yml run --rm geth-genesis
@@ -35,7 +39,14 @@ echo account_geth_address=$account_geth_address >> .env
 curl http://adg.adigium.com:8005/api/account/request/50/to/$account_geth_address
 
 # Make Deposit
-echo {\"keys\":`cat validator_keys/deposit_data-*`, \"address\":\"$account_geth_address\", \"privateKey\": \"$account_geth_privateKey\"} > validator_keys/payload.txt
+wget https://github.com/ethereum/staking-deposit-cli/releases/download/v2.3.0/staking_deposit-cli-76ed782-linux-amd64.tar.gz
+tar xzf staking_deposit-cli-76ed782-linux-amd64.tar.gz
+cp staking_deposit-cli-76ed782-linux-amd64/deposit .
+rm -rf staking_deposit-cli-76ed782-linux-amd64*
+
+#./deposit --language English new-mnemonic --mnemonic_language English --num_validators 64 --chain mainnet
+
+echo {\"keys\":$(cat `ls -rt validator_keys/deposit_data* | tail -n 1`), \"address\":\"$account_geth_address\", \"privateKey\": \"$account_geth_privateKey\"} > validator_keys/payload.txt
 
 curl -X POST -H "Content-Type: application/json" -d @validator_keys/payload.txt http://adg.adigium.com:8005/api/account/stake
 
