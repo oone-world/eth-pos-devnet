@@ -16,10 +16,11 @@ services:
       - --authrpc.jwtsecret=/execution/jwtsecret
       - --datadir=/execution
       - --allow-insecure-unlock
-      - --unlock=0x123463a4b065722e99115d6c222f267d9cabb524
+      - --unlock=$account_geth_address
       - --password=/execution/geth_password.txt
       - --syncmode=full
       - --mine
+        #- console
     ports:
       - 8551:8551
       - 8545:8545
@@ -38,15 +39,10 @@ services:
     image: "gcr.io/prysmaticlabs/prysm/beacon-chain:latest"
     command:
       - --datadir=/consensus/beacondata
-      # No peers to sync with in this testnet, so setting to 0
       - --min-sync-peers=0
-      - --interop-genesis-state=/consensus/genesis.ssz
-      - --interop-eth1data-votes
-      - --bootstrap-node=
       # The chain configuration file used for setting up Prysm
       - --chain-config-file=/consensus/config.yml
       - --config-file=/consensus/config.yml
-      # We specify the chain id used by our execution client
       - --rpc-host=0.0.0.0
       - --grpc-gateway-host=0.0.0.0
       - --monitoring-host=0.0.0.0
@@ -54,8 +50,8 @@ services:
       - --chain-id=32382
       - --accept-terms-of-use
       - --jwt-secret=/execution/jwtsecret
-      - --suggested-fee-recipient=0x123463a4b065722e99115d6c222f267d9cabb524
-      - --p2p-host-ip=45.32.169.236
+      - --suggested-fee-recipient=$account_geth_address
+      #- --p2p-host-ip=45.32.169.236
     depends_on:
       geth:
         condition: service_started
@@ -69,17 +65,15 @@ services:
       - ./consensus:/consensus
       - ./jwtsecret:/execution/jwtsecret
 
-  # We run a validator client with 64, deterministically-generated keys that match
-  # The validator keys present in the beacon chain genesis state generated a few steps above.
+  # We run a validator client
   validator:
     image: "gcr.io/prysmaticlabs/prysm/validator:latest"
     command:
       - --beacon-rpc-provider=beacon-chain:4000
       - --datadir=/consensus/validatordata
       - --accept-terms-of-use
-      - --interop-num-validators=64
-      - --interop-start-index=0
       - --chain-config-file=/consensus/config.yml
+      - --wallet-dir=wallet_dir
     depends_on:
       beacon-chain:
         condition: service_started
