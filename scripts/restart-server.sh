@@ -66,7 +66,7 @@ cp /root/prysm/validator .
 docker compose -f docker-initialize.yml run --rm validator-accounts-import
 
 #./validator --datadir=consensus/validatordata --accept-terms-of-use --chain-config-file=consensus/config.yml --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
-docker compose -f docker-run.yml up validator
+docker compose -f docker-run.yml up validator -d
 
 # Write node info
 scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt

@@ -40,6 +40,9 @@ services:
     command:
       - --datadir=/consensus/beacondata
       - --min-sync-peers=0
+      - --genesis-state=/consensus/genesis.ssz
+      #- --interop-eth1data-votes
+      - --bootstrap-node=
       # The chain configuration file used for setting up Prysm
       - --chain-config-file=/consensus/config.yml
       - --config-file=/consensus/config.yml
@@ -69,6 +72,8 @@ services:
   validator:
     image: "gcr.io/prysmaticlabs/prysm/validator:latest"
     command:
+      #- --interop-num-validators=1
+      #- --interop-start-index=0
       - --beacon-rpc-provider=beacon-chain:4000
       - --datadir=/consensus/validatordata
       - --accept-terms-of-use
