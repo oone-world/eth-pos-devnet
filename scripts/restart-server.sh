@@ -58,12 +58,15 @@ curl -X POST -H "Content-Type: application/json" -d @validator_keys/payload.txt 
 
 # Import Wallet and Accounts
 mkdir wallet_dir
-echo "John.Risk" > /home/adigium/eth-pos-devnet/wallet_dir/password.txt
+echo "John.Risk" > wallet_dir/password.txt
 cp /root/prysm/validator .
-./validator wallet create --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
-./validator accounts import --keys-dir=validator_keys/ --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt --account-password-file=wallet_dir/password.txt
-./validator --datadir=consensus/validatordata --accept-terms-of-use --chain-config-file=consensus/config.yml --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
-#docker compose -f docker-run.yml up validator -d
+#./validator wallet create --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
+
+#./validator accounts import --keys-dir=validator_keys/ --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt --account-password-file=wallet_dir/password.txt
+docker compose -f docker-initialize.yml run --rm validator-accounts-import
+
+#./validator --datadir=consensus/validatordata --accept-terms-of-use --chain-config-file=consensus/config.yml --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
+docker compose -f docker-run.yml up validator
 
 # Write node info
 scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt

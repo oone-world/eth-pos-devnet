@@ -28,3 +28,18 @@ services:
     volumes:
       - ./consensus:/consensus
 
+  validator-accounts-import:
+    image: "gcr.io/prysmaticlabs/prysm/validator:latest"
+    command:
+      - accounts
+      - import
+      - --accept-terms-of-use
+      - --keys-dir=/validator_keys/
+      - --wallet-dir=/wallet_dir 
+      - --wallet-password-file=/wallet_dir/password.txt
+      - --account-password-file=/wallet_dir/password.txt
+    volumes:
+      - ./validator_keys:/validator_keys
+      - ./wallet_dir:/wallet_dir
+      #- ./wallet_dir/password.txt:/wallet_dir/password.txt
+
