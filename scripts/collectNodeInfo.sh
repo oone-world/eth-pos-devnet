@@ -1,9 +1,10 @@
 server_ip=`curl ifconfig.me 2>/dev/null` \
         && echo server_ip=$server_ip
 echo
+cd /home/adigium/eth-pos-devnet
 
-bootgeth=`docker logs eth-pos-devnet-geth-1 2>&1 | grep self=enode | sed s/.*self=//g | sed s/@127.0.0.1:30303/@${server_ip}:30303/g | tail -1` \
-        && echo bootgeth=$bootgeth
+bootgeth=`geth attach --exec "admin.nodeInfo.enode" execution/geth.ipc | sed s/^\"//g | sed s/\"$//g` \
+		&& echo bootgeth=$bootgeth
 echo
 
 bootbeacon=`curl http://localhost:8080/p2p 2>/dev/null | grep self= | sed s/',\\'/'ip4.*'//g | sed s/'self='//g` \

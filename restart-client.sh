@@ -9,8 +9,16 @@ docker compose down
 # Clean Folders
 git clean -fxd
 test -d logs || mkdir logs
-
 #rm -rf consensus/beacondata/ consensus/genesis.ssz consensus/validatordata/ execution/geth/
+
+# Get BootNode info
+remote_server_ip=adigium.innuva.com
+curl http://$remote_server_ip/nodeinfo.txt > .env
+curl http://$remote_server_ip/genesis.ssz > consensus/genesis.ssz || exit
+#rm -f getBeaconGenesis.php
+#wget http://adg.adigium.com:3003/getBeaconGenesis.php
+#mv getBeaconGenesis.php consensus/genesis.ssz
+
 
 # Initialize Genesis
 geth --datadir=execution init execution/genesis.json
@@ -49,7 +57,7 @@ nohup geth --networkid=123456 \
 	--password=execution/geth_password.txt \
 	--syncmode=full \
 	--mine \
-	> logs/geth-1 &
+	> logs/geth-2 &
 sleep 5
 
 #docker compose -f docker-run.yml up beacon-chain -d
@@ -71,7 +79,7 @@ nohup ./prysm.sh beacon-chain \
 	--jwt-secret=execution/jwtsecret \
 	--suggested-fee-recipient=$account_geth_address \
 	--p2p-host-ip=$my_ip \
-	> logs/beacon-chain-1 &
+	> logs/beacon-chain-2 &
 	# --interop-eth1data-votes
 
 sleep 5
@@ -122,7 +130,7 @@ nohup ./prysm.sh validator \
 	--chain-config-file=consensus/config.yml \
 	--wallet-dir=wallet_dir \
 	--wallet-password-file=wallet_dir/password.txt \
-	> logs/validator-1 &
+	> logs/validator-2 &
 
 # Write node info
 scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt
@@ -133,6 +141,3 @@ echo You can watch the log file:
 echo "	tail -f /home/adigium/eth-pos-devnet/logs/geth-1"
 echo "	tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1"
 echo "	tail -f /home/adigium/eth-pos-devnet/logs/validator-1"
-
-
-#pkill -f beacondata
