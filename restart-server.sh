@@ -1,7 +1,7 @@
 killall geth beacon-chain validator
 pkill -f ./prysm.*
 
-#set -e 
+set -e 
 cd /home/adigium/eth-pos-devnet/
 
 docker compose down
@@ -130,9 +130,10 @@ cp consensus/genesis.ssz /var/www/html/adigium/
 
 # Show Log Commands
 echo You can watch the log file:
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/geth-1"
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1"
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/validator-1"
-
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/geth-1"
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1"
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/validator-1"
+echo "    geth attach --exec 'admin.peers' execution/geth.ipc"
+echo "    curl localhost:8080/p2p"
 
 #pkill -f beacondata

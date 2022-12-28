@@ -1,7 +1,7 @@
 killall geth beacon-chain validator
 pkill -f ./prysm.*
 
-#set -e 
+set -e 
 cd /home/adigium/eth-pos-devnet/
 
 docker compose down
@@ -14,7 +14,11 @@ test -d logs || mkdir logs
 # Get BootNode info
 remote_server_ip=adigium.innuva.com
 curl http://$remote_server_ip/nodeinfo.txt > .env
-curl http://$remote_server_ip/genesis.ssz > consensus/genesis.ssz || exit
+echo r8GTzt0JjA8JY2wVvF
+scp root@$remote_server_ip:/home/adigium/eth-pos-devnet/consensus/genesis.ssz consensus/genesis.ssz || exit
+
+#wget http://$remote_server_ip/genesis.ssz > consensus/genesis.ssz || exit
+
 #rm -f getBeaconGenesis.php
 #wget http://adg.adigium.com:3003/getBeaconGenesis.php
 #mv getBeaconGenesis.php consensus/genesis.ssz
@@ -22,10 +26,9 @@ curl http://$remote_server_ip/genesis.ssz > consensus/genesis.ssz || exit
 
 # Initialize Genesis
 geth --datadir=execution init execution/genesis.json
-docker compose -f docker-initialize.yml run --rm create-beacon-chain-genesis
 
 # Create Account
-#curl http://localhost:8005/api/account/new > execution/account_geth.txt
+#curl http://$remote_server_ip:8005/api/account/new > execution/account_geth.txt
 echo account_geth_address=0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f > execution/account_geth.txt
 echo account_geth_privateKey=0x28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf >> execution/account_geth.txt
 
@@ -37,6 +40,7 @@ geth --datadir=execution account import --password execution/geth_password.txt e
 # Add account to .env file
 test -f .env && sed -i /^account_geth_address/d .env 
 echo account_geth_address=$account_geth_address >> .env
+source .env
 
 cp jwtsecret execution/jwtsecret
 
@@ -56,7 +60,7 @@ nohup geth --networkid=123456 \
 	--unlock=$account_geth_address \
 	--password=execution/geth_password.txt \
 	--syncmode=full \
-	--mine \
+	--bootnodes=$bootgeth \
 	> logs/geth-2 &
 sleep 5
 
@@ -65,9 +69,9 @@ echo "Stating Beacon Chain Node"
 my_ip=`curl ifconfig.me 2>/dev/null` && echo my_ip=$my_ip
 nohup ./prysm.sh beacon-chain \
 	--datadir=consensus/beacondata \
-	--min-sync-peers=0 \
+	--min-sync-peers=1 \
 	--genesis-state=consensus/genesis.ssz \
-	--bootstrap-node= \
+	--bootstrap-node=$bootbeacon \
 	--chain-config-file=consensus/config.yml \
 	--config-file=consensus/config.yml \
 	--rpc-host=0.0.0.0 \
@@ -86,9 +90,9 @@ sleep 5
 
 # Get Ethers
 #echo Getting 2200 Ethers
-#curl http://localhost:8005/api/account/request/999/to/$account_geth_address
-#curl http://localhost:8005/api/account/request/999/to/$account_geth_address
-#curl http://localhost:8005/api/account/request/202/to/$account_geth_address
+curl http://$remote_server_ip:8005/api/account/request/33/to/$account_geth_address
+#curl http://$remote_server_ip:8005/api/account/request/999/to/$account_geth_address
+#curl http://$remote_server_ip:8005/api/account/request/202/to/$account_geth_address
 
 # Deploy Contracts
 #cd /home/adigium/smart_contracts/
@@ -105,14 +109,14 @@ cp -R ../validator_keys .
 
 echo "Making Deposit"
 echo {\"keys\":$(cat `ls -rt validator_keys/deposit_data* | tail -n 1`), \"address\":\"$account_geth_address\", \"privateKey\": \"$account_geth_privateKey\"} > validator_keys/payload.txt
-curl -X POST -H "Content-Type: application/json" -d @validator_keys/payload.txt http://localhost:8005/api/account/stake
+curl -X POST -H "Content-Type: application/json" -d @validator_keys/payload.txt http://$remote_server_ip:8005/api/account/stake
 
 # Import Wallet and Accounts
 mkdir wallet_dir
 echo "John.Risk" > wallet_dir/password.txt
 #cp /root/prysm/validator .
 #./validator wallet create --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
-
+exit
 ./prysm.sh validator \
 	accounts \
 	import \
@@ -138,6 +142,8 @@ cp consensus/genesis.ssz /var/www/html/adigium/
 
 # Show Log Commands
 echo You can watch the log file:
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/geth-1"
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1"
-echo "	tail -f /home/adigium/eth-pos-devnet/logs/validator-1"
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/geth-2"
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-2"
+echo "    tail -f /home/adigium/eth-pos-devnet/logs/validator-2"
+echo "    geth attach --exec 'admin.peers' execution/geth.ipc"
+echo "    curl localhost:8080/p2p"
