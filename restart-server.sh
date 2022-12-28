@@ -12,9 +12,8 @@ test -d logs || mkdir logs
 
 #rm -rf consensus/beacondata/ consensus/genesis.ssz consensus/validatordata/ execution/geth/
 
-# Initialize Genesis
+# Initialize Geth Genesis
 geth --datadir=execution init execution/genesis.json
-docker compose -f docker-initialize.yml run --rm create-beacon-chain-genesis
 
 # Create Account
 #curl http://localhost:8005/api/account/new > execution/account_geth.txt
@@ -50,7 +49,12 @@ nohup geth --networkid=123456 \
 	--syncmode=full \
 	--mine \
 	> logs/geth-1 &
-sleep 5
+sleep 20
+
+# Initialize BeaconChain Genesis
+#cp ../eth2-testnet-genesis.bin .
+#./eth2-testnet-genesis.bin merge --config "consensus/config.yml" --eth1-config "execution/genesis.json" --state-output "consensus/genesis.ssz"
+docker compose -f docker-initialize.yml run --rm create-beacon-chain-genesis
 
 #docker compose -f docker-run.yml up beacon-chain -d
 echo "Stating Beacon Chain Node"
@@ -73,6 +77,7 @@ nohup ./prysm.sh beacon-chain \
 	--p2p-host-ip=$my_ip \
 	> logs/beacon-chain-1 &
 	# --interop-eth1data-votes
+	#--verbosity=debug \
 
 sleep 5
 
@@ -130,9 +135,9 @@ cp consensus/genesis.ssz /var/www/html/adigium/
 
 # Show Log Commands
 echo You can watch the log file:
-echo "tail -f /home/adigium/eth-pos-devnet/logs/geth-1"
-echo "tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1"
-echo "tail -f /home/adigium/eth-pos-devnet/logs/validator-1"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/geth-1 -n1000"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1 -n1000"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/validator-1 -n1000"
 echo "geth attach --exec 'admin.peers' execution/geth.ipc"
 echo "curl localhost:8080/p2p"
 
