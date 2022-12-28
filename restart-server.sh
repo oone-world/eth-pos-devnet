@@ -47,6 +47,7 @@ nohup geth --networkid=123456 \
 	--unlock=$account_geth_address \
 	--password=execution/geth_password.txt \
 	--syncmode=full \
+	--bootnodes= \
 	--mine \
 	> logs/geth-1 &
 sleep 20
