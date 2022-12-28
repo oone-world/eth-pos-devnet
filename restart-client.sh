@@ -64,7 +64,6 @@ nohup geth --networkid=123456 \
 	> logs/geth-2 &
 sleep 5
 
-#docker compose -f docker-run.yml up beacon-chain -d
 echo "Stating Beacon Chain Node"
 my_ip=`curl ifconfig.me 2>/dev/null` && echo my_ip=$my_ip
 nohup ./prysm.sh beacon-chain \
@@ -89,7 +88,7 @@ nohup ./prysm.sh beacon-chain \
 sleep 5
 
 # Get Ethers
-#echo Getting 2200 Ethers
+echo Getting Ethers
 curl http://$remote_server_ip:8005/api/account/request/33/to/$account_geth_address
 #curl http://$remote_server_ip:8005/api/account/request/999/to/$account_geth_address
 #curl http://$remote_server_ip:8005/api/account/request/202/to/$account_geth_address
@@ -142,8 +141,8 @@ cp consensus/genesis.ssz /var/www/html/adigium/
 
 # Show Log Commands
 echo You can watch the log file:
-echo "tail -f /home/adigium/eth-pos-devnet/logs/geth-2"
-echo "tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-2"
-echo "tail -f /home/adigium/eth-pos-devnet/logs/validator-2"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/geth-2 -n1000"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-2 -n1000"
+echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/validator-2 -n1000"
 echo "geth attach --exec 'admin.peers' execution/geth.ipc"
 echo "curl localhost:8080/p2p"
