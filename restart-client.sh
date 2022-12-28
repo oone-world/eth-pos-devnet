@@ -116,7 +116,7 @@ mkdir wallet_dir
 echo "John.Risk" > wallet_dir/password.txt
 #cp /root/prysm/validator .
 #./validator wallet create --wallet-dir=wallet_dir --wallet-password-file=wallet_dir/password.txt
-exit
+
 ./prysm.sh validator \
 	accounts \
 	import \
@@ -128,7 +128,7 @@ exit
 
 echo "Stating Validator Node"
 nohup ./prysm.sh validator \
-	--beacon-rpc-provider=beacon-chain:4000 \
+	--beacon-rpc-provider=localhost:4000 \
 	--datadir=consensus/validatordata \
 	--accept-terms-of-use \
 	--chain-config-file=consensus/config.yml \
@@ -142,8 +142,8 @@ cp consensus/genesis.ssz /var/www/html/adigium/
 
 # Show Log Commands
 echo You can watch the log file:
-echo "    tail -f /home/adigium/eth-pos-devnet/logs/geth-2"
-echo "    tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-2"
-echo "    tail -f /home/adigium/eth-pos-devnet/logs/validator-2"
-echo "    geth attach --exec 'admin.peers' execution/geth.ipc"
-echo "    curl localhost:8080/p2p"
+echo "tail -f /home/adigium/eth-pos-devnet/logs/geth-2"
+echo "tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-2"
+echo "tail -f /home/adigium/eth-pos-devnet/logs/validator-2"
+echo "geth attach --exec 'admin.peers' execution/geth.ipc"
+echo "curl localhost:8080/p2p"
