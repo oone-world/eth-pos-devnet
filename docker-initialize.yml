@@ -10,7 +10,7 @@ services:
 
   geth-account:
     image: "ethereum/client-go:latest"
-    command: --datadir=/execution account import --password execution/geth_password.txt execution/account_geth_privateKey
+    command: --datadir=/execution account import --password /execution/geth_password.txt /execution/account_geth_privateKey
     #command: --datadir=/execution account new --password execution/geth_password.txt
     volumes:
       - ./execution:/execution
