@@ -1,0 +1,45 @@
+version: "3.9"
+services:
+  # Sets up the genesis configuration for the go-ethereum client from a JSON file.
+  geth-genesis:
+    image: "ethereum/client-go:latest"
+    command: --datadir=/execution init /execution/genesis.json
+    volumes:
+      - ./execution:/execution
+      - ./execution/genesis.json:/execution/genesis.json
+
+  geth-account:
+    image: "ethereum/client-go:latest"
+    command: --datadir=/execution account import --password /execution/geth_password.txt /execution/account_geth_privateKey
+    #command: --datadir=/execution account new --password execution/geth_password.txt
+    volumes:
+      - ./execution:/execution
+
+  # Creates a genesis state for the beacon chain using a YAML configuration file and
+  # a deterministic set of 64 validators.
+  create-beacon-chain-genesis:
+    image: "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:latest"
+    command:
+      - testnet
+      - generate-genesis
+      - --num-validators=64
+      - --output-ssz=/consensus/genesis.ssz
+      - --chain-config-file=/consensus/config.yml
+    volumes:
+      - ./consensus:/consensus
+
+  validator-accounts-import:
+    image: "gcr.io/prysmaticlabs/prysm/validator:latest"
+    command:
+      - accounts
+      - import
+      - --accept-terms-of-use
+      - --keys-dir=/validator_keys/
+      - --wallet-dir=/wallet_dir 
+      - --wallet-password-file=/wallet_dir/password.txt
+      - --account-password-file=/wallet_dir/password.txt
+    volumes:
+      - ./validator_keys:/validator_keys
+      - ./wallet_dir:/wallet_dir
+      #- ./wallet_dir/password.txt:/wallet_dir/password.txt
+
