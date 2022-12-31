@@ -25,7 +25,8 @@ scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt
 cp consensus/genesis.ssz /var/www/html/adigium/ 
 
 # Show Log Commands
-echo You can watch the log file
-echo "	docker logs eth-pos-devnet-geth-1 -f"
-echo "	docker logs eth-pos-devnet-beacon-chain-1 -f"
-echo "	docker logs eth-pos-devnet-validator-1 -f"
+echo "You can watch the log file
+clear; docker logs eth-pos-devnet-geth-1 -f
+clear; docker logs eth-pos-devnet-beacon-chain-1 -f
+clear; docker logs eth-pos-devnet-validator-1 -f
+"
