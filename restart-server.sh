@@ -50,7 +50,7 @@ nohup geth --networkid=123456 \
 	--bootnodes= \
 	--mine \
 	> logs/geth-1 &
-sleep 20
+sleep 10
 
 # Initialize BeaconChain Genesis
 #cp ../eth2-testnet-genesis.bin .
@@ -135,11 +135,13 @@ scripts/collectNodeInfo.sh > /var/www/html/adigium/nodeinfo.txt
 cp consensus/genesis.ssz /var/www/html/adigium/ 
 
 # Show Log Commands
-echo You can watch the log file:
-echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/geth-1 -n1000"
-echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1 -n1000"
-echo "clear && tail -f /home/adigium/eth-pos-devnet/logs/validator-1 -n1000"
-echo "geth attach --exec 'admin.peers' execution/geth.ipc"
-echo "curl localhost:8080/p2p"
+echo "
+You can watch the logs:
+clear && tail -f /home/adigium/eth-pos-devnet/logs/geth-1 -n1000
+clear && tail -f /home/adigium/eth-pos-devnet/logs/beacon-chain-1 -n1000
+clear && tail -f /home/adigium/eth-pos-devnet/logs/validator-1 -n1000
+geth attach --exec 'admin.peers' execution/geth.ipc
+curl localhost:8080/p2p
+"
 
 #pkill -f beacondata
