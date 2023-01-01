@@ -43,6 +43,7 @@ services:
       - --genesis-state=/consensus/genesis.ssz
       #- --interop-eth1data-votes
       - --bootstrap-node=
+      - --contract-deployment-block=0
       # The chain configuration file used for setting up Prysm
       - --chain-config-file=/consensus/config.yml
       - --config-file=/consensus/config.yml
