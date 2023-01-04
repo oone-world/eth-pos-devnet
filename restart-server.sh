@@ -20,12 +20,21 @@ function PrepareEnvironment() {
 
 	# Clean Folders
 	git clean -fxd
-	#rm execution/bootnodes.txt consensus/bootnodes.txt
+	rm execution/bootnodes.txt consensus/bootnodes.txt
 
 	test -d logs || mkdir logs
 	cp -R ../validator_keys .
 
 	my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
+}
+function AdjustTimestamps {
+	timestamp=`date +%s`	
+	timestampHex=`printf '%x' $timestamp`
+	Log "timestamp=$timestamp"
+	Log "timestampHex=$timestampHex"
+
+	sed -i s/\"timestamp\":.*/\"timestamp\":\"0x$timestampHex\",/g execution/genesis.json
+	sed -i s/MIN_GENESIS_TIME:.*/"MIN_GENESIS_TIME: $timestamp"/g consensus/config.yml
 }
 function InitGeth()
 {
@@ -81,7 +90,7 @@ function StoreGethHash() {
 	echo $genesis_hash > execution/genesis_hash.txt
 	echo $genesis_hash > consensus/deposit_contract_block.txt
 	sed -i s/TERMINAL_BLOCK_HASH:.*/"TERMINAL_BLOCK_HASH: $genesis_hash"/g consensus/config.yml
-	#cat consensus/config.yaml|grep TERMINAL_BLOCK_HASH
+	#cat consensus/config.yml|grep TERMINAL_BLOCK_HASH
 	Log "genesis_hash = $genesis_hash"
 }
 function GenerateGenesisSsz1() {
@@ -92,9 +101,9 @@ function GenerateGenesisSsz2()
 {
 	Log "Generating Beaconchain Genesis With Validators"
 	./eth2-testnet-genesis merge \
-	  --config "./consensus/config.yaml" \
+	  --config "./consensus/config.yml" \
 	  --eth1-config "./execution/genesis.json" \
-	  --mnemonics "./consensus/mnemonic.yaml" \
+	  --mnemonics "./consensus/mnemonic.yml" \
 	  --state-output "./consensus/genesis.ssz" \
 	  --tranches-dir "./consensus/tranches"
 }
@@ -145,7 +154,7 @@ function CheckGeth()
 	echo Checking Geth $1
 	test -z $my_ip || my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
 	geth attach --exec "admin.nodeInfo.enode" execution/geth.ipc | sed s/^\"// | sed s/\"$//
-	geth attach --exec "admin.peers" execution/geth.ipc | grep "remoteAddress" | grep $my_ip
+	geth attach --exec "admin.peers" execution/geth.ipc | grep "remoteAddress" | grep $my_ip || echo NoPeers
 }
 
 function CreateWallet() {
@@ -216,6 +225,8 @@ function RunValidator()
 }
 
 PrepareEnvironment
+set -e
+AdjustTimestamps
 
 InitGeth
 CreateAccount
