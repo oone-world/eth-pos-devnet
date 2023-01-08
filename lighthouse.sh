@@ -1,4 +1,4 @@
-NodesCount=1
+NodesCount=2
 LogLevel=debug
 ######## Checker Functions
 function Log() {
@@ -58,9 +58,9 @@ function PrepareEnvironment() {
 	test -d data || mkdir data
 	test -d consensus/validator_keys || mkdir consensus/validator_keys
 	test -d data/wallet_dir || mkdir data/wallet_dir
-	if [[ -d ../validator_keys64 ]]; then
+	if [[ -d ../validator_keys16 ]]; then
 		rm consensus/validator_keys/*
-		cp -R ../validator_keys64/* consensus/validator_keys
+		cp -R ../validator_keys16/* consensus/validator_keys
 	fi
 
 	my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
@@ -154,7 +154,7 @@ function CreateBeaconTestNetConfig {
 		--testnet-dir data/testnet \
 		--deposit-contract-address $deposit_contract_address \
 		--deposit-contract-deploy-block $deposit_contract_block_number \
-		--eth1-follow-distance 16 \
+		--eth1-follow-distance 1 \
 		--min-deposit-amount 10000000 \
 		--force \
 		--altair-fork-epoch 1 \
@@ -199,6 +199,7 @@ function RunBeacon() {
 		--execution-endpoint http://127.0.0.1:$((8551 + $1)) \
 		--execution-jwt "./data/execution/$1/geth/jwtsecret" \
 		--http \
+		--http-port $((5052 + $1)) \
 		--eth1 \
 		--staking \
 		--enable-private-discovery \
@@ -206,10 +207,10 @@ function RunBeacon() {
 		--enr-udp-port $((9000 + $1)) \
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
-		--http-port $((8000 + $1)) \
 		--disable-packet-filter \
-		--target-peers $i
+		--target-peers $1
 	return
+	
 	echo Waiting for Beacon enr ...
 	local my_enr=''
 	while [[ -z $my_enr ]]
@@ -305,20 +306,35 @@ function RunBeacon_Lighthouse() {
 	echo $my_enr >> consensus/bootnodes.txt
 }
 
-function RunValidator()
+function ImportValidator()
 {
 	Log "Running Validators $1"
 	cp -R consensus/validator_keys consensus/validator_keys_$1
-	nohup clients/lodestar validator \
-	  --dataDir "./data/consensus/$1" \
-	  --beaconNodes "http://127.0.0.1:$((9596 + $1))" \
-	  --suggestedFeeRecipient "0xCaA29806044A08E533963b2e573C1230A2cd9a2d" \
-	  --graffiti "YOLO MERGEDNET GETH LODESTAR" \
-	  --paramsFile "./consensus/config.yml" \
-	  --importKeystores "./consensus/validator_keys_$1" \
-	  --importKeystoresPassword "./consensus/validator_keys_$1/password.txt" \
-	  --logLevel $LogLevel \
-	  > ./logs/validator_$1.log &
+	
+	lighthouse account validator import \
+		--testnet-dir "./data/testnet" \
+		--directory consensus/validator_keys_$1 \
+		--password-file consensus/validator_keys_$1/password.txt \
+		--reuse-password
+}
+	
+function RunValidator()
+{
+
+	RunInBackground ./logs/validator_$1.log lighthouse vc --allow-unsynced \
+		--testnet-dir "./data/testnet"
+		#--beacon-nodes
+		#--unencrypted-http-transport
+	
+	return
+	
+	RunInBackground ./logs/validator_$1.log lighthouse \
+		vc \
+		--datadir ${@:$OPTIND:1} \
+		--testnet-dir $TESTNET_DIR \
+		--init-slashing-protection \
+		--beacon-nodes ${@:$OPTIND+1:1} \
+		$VC_ARGS	
 }
 function RunValidator_Prysm()
 {
@@ -392,6 +408,19 @@ function MakeDeposit {
 	echo {\"keys\":$(cat `ls -rt consensus/validator_keys/deposit_data* | tail -n 1`), \"address\":\"0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f\", \"privateKey\": \"0x28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf\"} > consensus/validator_keys/payload.txt
 
 	curl -X POST -H "Content-Type: application/json" -d @consensus/validator_keys/payload.txt http://localhost:8005/api/account/stake
+	echo
+}
+function ExtractENR {
+	echo Waiting for Beacon enr ...
+	local my_enr=''
+	while [[ -z $my_enr ]]
+	do
+		sleep 1
+		my_enr=`cat logs/beacon_0.log | grep "enr: enr:" | sed s/.*enr/enr/g | sed s/', service: libp2p'//g`
+	done
+	echo "My Enr = $my_enr"
+	echo $my_enr >> consensus/bootnodes.txt
+
 }
 #git clone https://github.com/q9f/mergednet.git
 #cd mergednet
@@ -413,19 +442,23 @@ DeployContract
 CreateBeaconTestNetConfig
 #GenerateGenesisSSZ
 
-for i in $(seq 0 $(($NodesCount-1))); do
-	RunBeacon $i
-done
+#for i in $(seq 0 $(($NodesCount-1))); do
+#	RunBeacon $i
+#done
 
 #CreateWallet
+RunBeacon 0
 MakeDeposit
-exit
+ExtractENR
+RunBeacon 1
+
 sleep 5
 
 #for i in $(seq 0 $(($NodesCount-1))); do
 #	RunValidator $i
 #done
-RunValidator 0
+ImportValidator 0
+#RunValidator 0
 
 #RunStaker
 
