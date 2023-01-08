@@ -16,10 +16,10 @@ function CheckGeth()
 function CheckBeacon()
 {
 	Log "Checking Beacon $1"
-	echo My ID: `curl http://localhost:$((9596 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
-	echo My enr: `curl http://localhost:$((9596 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
-	echo Peer Count: `curl http://localhost:$((9596 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
-	curl http://localhost:$((9596 + $1))/eth/v1/node/syncing 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
 }
 function CheckBeacon_Prysm()
 {
@@ -322,7 +322,8 @@ function RunValidator()
 {
 
 	RunInBackground ./logs/validator_$1.log lighthouse vc --allow-unsynced \
-		--testnet-dir "./data/testnet"
+		--testnet-dir "./data/testnet" \
+		--suggested-fee-recipient "0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" 
 		#--beacon-nodes
 		#--unencrypted-http-transport
 	
