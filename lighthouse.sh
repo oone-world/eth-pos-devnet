@@ -208,7 +208,8 @@ function RunBeacon() {
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
 		--disable-packet-filter \
-		--target-peers $1
+		--target-peers $1 \
+		--boot-nodes=$bootnodes
 	return
 	
 	echo Waiting for Beacon enr ...
@@ -216,7 +217,7 @@ function RunBeacon() {
 	while [[ -z $my_enr ]]
 	do
 		sleep 1
-		my_enr=`curl http://localhost:$((9596 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
+		my_enr=`curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
 	done
 	echo "My Enr = $my_enr"
 	echo $my_enr >> consensus/bootnodes.txt
@@ -449,11 +450,11 @@ CreateBeaconTestNetConfig
 
 #CreateWallet
 RunBeacon 0
-MakeDeposit
 ExtractENR
 RunBeacon 1
 
 sleep 5
+MakeDeposit
 
 #for i in $(seq 0 $(($NodesCount-1))); do
 #	RunValidator $i
@@ -478,4 +479,3 @@ curl http://localhost:9596/eth/v1/node/identity | jq
 curl http://localhost:9596/eth/v1/node/peers | jq
 curl http://localhost:9596/eth/v1/node/syncing | jq
 "
-
