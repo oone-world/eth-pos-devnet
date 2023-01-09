@@ -450,11 +450,12 @@ CreateBeaconTestNetConfig
 
 #CreateWallet
 RunBeacon 0
+MakeDeposit
 ExtractENR
 RunBeacon 1
 
 sleep 5
-MakeDeposit
+
 
 #for i in $(seq 0 $(($NodesCount-1))); do
 #	RunValidator $i
