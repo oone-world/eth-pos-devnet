@@ -149,6 +149,10 @@ function DeployContract {
 	local deposit_contract_block_hash=`GetGethInfoFromFirstNode "eth.getTransaction('$deposit_contract_transaction_hash').hash"`
 	echo deposit_contract_block_hash = $deposit_contract_block_hash
 }
+function UseInitialContract {
+	deposit_contract_address=0x4242424242424242424242424242424242424242
+	deposit_contract_block_number=0
+}
 function CreateBeaconTestNetConfig {
 	lcli new-testnet \
 		--testnet-dir data/testnet \
@@ -208,7 +212,6 @@ function RunBeacon() {
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
 		--disable-packet-filter \
-		--target-peers $1 \
 		--boot-nodes=$bootnodes
 	return
 	
@@ -440,7 +443,9 @@ for i in $(seq 0 $(($NodesCount-1))); do
 done
 
 #StoreGethHash
-DeployContract
+#DeployContract
+UseInitialContract
+
 CreateBeaconTestNetConfig
 #GenerateGenesisSSZ
 
@@ -461,7 +466,7 @@ sleep 5
 #	RunValidator $i
 #done
 ImportValidator 0
-#RunValidator 0
+RunValidator 0
 
 #RunStaker
 
