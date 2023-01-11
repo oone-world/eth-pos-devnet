@@ -161,9 +161,9 @@ function CreateBeaconTestNetConfig {
 		--eth1-follow-distance 1 \
 		--min-deposit-amount 10000000 \
 		--force \
-		--altair-fork-epoch 1 \
-		--merge-fork-epoch 2 \
-		--genesis-delay 60 \
+		--altair-fork-epoch 0 \
+		--merge-fork-epoch 1 \
+		--genesis-delay 30 \
 		--max-effective-balance 3200000000 \
 		--min-genesis-active-validator-count 8 \
 		--min-genesis-time $timestamp \
@@ -171,7 +171,6 @@ function CreateBeaconTestNetConfig {
 		--eth1-id 32382
 	
 	sed -i s/TERMINAL_TOTAL_DIFFICULTY.*/'TERMINAL_TOTAL_DIFFICULTY: 64'/g data/testnet/config.yaml
-		# --eth1-id
 		# --genesis-fork-version 0x01030307 \
 		# --genesis-time
 		# --seconds-per-eth1-block \
