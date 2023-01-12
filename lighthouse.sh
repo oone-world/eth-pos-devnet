@@ -1,5 +1,6 @@
 NodesCount=2
 LogLevel=debug
+Accounts=("0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" "0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
 ######## Checker Functions
 function Log() {
 	echo
@@ -16,10 +17,14 @@ function CheckGeth()
 function CheckBeacon()
 {
 	Log "Checking Beacon $1"
-	curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
-	curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
-	curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
-	curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
+	#curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
+	#curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
+	#curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
+	#curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
+	echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
+	echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
+	echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
+	curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
 }
 function CheckBeacon_Prysm()
 {
@@ -58,9 +63,9 @@ function PrepareEnvironment() {
 	test -d data || mkdir data
 	test -d consensus/validator_keys || mkdir consensus/validator_keys
 	test -d data/wallet_dir || mkdir data/wallet_dir
-	if [[ -d ../validator_keys16 ]]; then
+	if [[ -d ../validator_keys8 ]]; then
 		rm consensus/validator_keys/*
-		cp -R ../validator_keys16/* consensus/validator_keys
+		cp -R ../validator_keys8/* consensus/validator_keys
 	fi
 
 	my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
@@ -163,11 +168,12 @@ function CreateBeaconTestNetConfig {
 		--force \
 		--altair-fork-epoch 0 \
 		--merge-fork-epoch 1 \
-		--genesis-delay 30 \
+		--genesis-delay 10 \
 		--max-effective-balance 3200000000 \
 		--min-genesis-active-validator-count 8 \
 		--min-genesis-time $timestamp \
 		--spec mainnet \
+		--seconds-per-slot 6\
 		--eth1-id 32382
 	
 	sed -i s/TERMINAL_TOTAL_DIFFICULTY.*/'TERMINAL_TOTAL_DIFFICULTY: 64'/g data/testnet/config.yaml
@@ -195,10 +201,12 @@ function RunBeacon() {
 	local bootnodes=`cat consensus/bootnodes.txt 2>/dev/null | grep . | tr '\n' ',' | sed s/,$//g`
 	echo "Beacon Bootnodes = $bootnodes"
 	
+	if [[ ! -z $bootnodes ]]; then
+		local bootnodes_command="--boot-nodes=$bootnodes"
+	fi
 	RunInBackground ./logs/beacon_$1.log lighthouse beacon \
 		--testnet-dir "./data/testnet" \
 		--datadir "./data/consensus/$1" \
-		--spec mainnet \
 		--execution-endpoint http://127.0.0.1:$((8551 + $1)) \
 		--execution-jwt "./data/execution/$1/geth/jwtsecret" \
 		--http \
@@ -211,7 +219,8 @@ function RunBeacon() {
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
 		--disable-packet-filter \
-		--boot-nodes=$bootnodes
+		--graffiti "ProducedBy_Beacon_Node_$1" \
+		"$bootnodes_command"
 	return
 	
 	echo Waiting for Beacon enr ...
@@ -316,6 +325,7 @@ function ImportValidator()
 	
 	lighthouse account validator import \
 		--testnet-dir "./data/testnet" \
+		--datadir "data/validator/$1" \
 		--directory consensus/validator_keys_$1 \
 		--password-file consensus/validator_keys_$1/password.txt \
 		--reuse-password
@@ -326,7 +336,10 @@ function RunValidator()
 
 	RunInBackground ./logs/validator_$1.log lighthouse vc --allow-unsynced \
 		--testnet-dir "./data/testnet" \
-		--suggested-fee-recipient "0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" 
+		--datadir "data/validator/$1" \
+		--beacon-nodes http://localhost:$((5052 + $1)) \
+		--graffiti "ProducedBy_Validator_$1" \
+		--suggested-fee-recipient ${Accounts[$1]} 
 		#--beacon-nodes
 		#--unencrypted-http-transport
 	
@@ -415,7 +428,7 @@ function MakeDeposit {
 	echo
 }
 function ExtractENR {
-	echo Waiting for Beacon enr ...
+	Log Waiting for Beacon enr ...
 	local my_enr=''
 	while [[ -z $my_enr ]]
 	do
@@ -425,6 +438,16 @@ function ExtractENR {
 	echo "My Enr = $my_enr"
 	echo $my_enr >> consensus/bootnodes.txt
 
+}
+function WaitForPosTransition {
+	Log "Waiting for POS Transition at slot 32. This could take a while (6.4 minutes) ..."
+	local pos=''
+	while [[ -z $pos ]]
+	do
+		sleep 10
+		pos=`cat logs/beacon_0.log | grep "Proof of Stake Activated" || :`
+	done
+	echo $pos
 }
 #git clone https://github.com/q9f/mergednet.git
 #cd mergednet
@@ -454,18 +477,21 @@ CreateBeaconTestNetConfig
 
 #CreateWallet
 RunBeacon 0
-MakeDeposit
-ExtractENR
-RunBeacon 1
+MakeDeposit 0 # deposit is needed to get enr
+ExtractENR # enr is needed to connect a peer beacon
+RunBeacon 1 # second beacon node is needed to sync with execution
 
 sleep 5
-
-
 #for i in $(seq 0 $(($NodesCount-1))); do
 #	RunValidator $i
 #done
 ImportValidator 0
-RunValidator 0
+RunValidator 0 # validator is needed to move to pos
+
+WaitForPosTransition
+
+ImportValidator 1
+RunValidator 1
 
 #RunStaker
 
