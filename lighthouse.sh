@@ -1,6 +1,8 @@
 NodesCount=2
 LogLevel=debug
 Accounts=("0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" "0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
+PrivateKeys=("28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf" "8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
+ValidatorKeys=("../validator_keys8" "../validator_keys8_2")
 ######## Checker Functions
 function Log() {
 	echo
@@ -88,10 +90,10 @@ function InitGeth()
 }
 function ImportGethAccount()
 {
-	Log Importing Account 0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f
+	Log Importing Account ${Accounts[$1]}
 	echo "password" > data/execution/geth_password.txt
-	echo "28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf" > data/execution/account_geth_privateKey
-	geth --datadir=data/execution/0 account import --password data/execution/geth_password.txt data/execution/account_geth_privateKey
+	echo ${PrivateKeys[0]} > data/execution/account_geth_privateKey
+	geth --datadir=data/execution/$1 account import --password data/execution/geth_password.txt data/execution/account_geth_privateKey
 }
 function RunInBackground {
 	local LogFile=$1
@@ -106,7 +108,7 @@ function RunGeth()
 	echo "Geth Bootnodes = $bootnodes"
 	local unlock_account=
 	if [[ $1 == 0 ]]; then
-		local unlock_account="--allow-insecure-unlock --unlock=0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f --password=data/execution/geth_password.txt --mine"
+		local unlock_account="--allow-insecure-unlock --unlock=${Accounts[$1]} --password=data/execution/geth_password.txt --mine"
 	fi
 	RunInBackground ./logs/geth_$1.log geth \
 		--http \
@@ -321,20 +323,20 @@ function RunBeacon_Lighthouse() {
 function ImportValidator()
 {
 	Log "Running Validators $1"
-	cp -R consensus/validator_keys consensus/validator_keys_$1
+	#cp -R consensus/validator_keys consensus/validator_keys_$1
 	
 	lighthouse account validator import \
 		--testnet-dir "./data/testnet" \
 		--datadir "data/validator/$1" \
-		--directory consensus/validator_keys_$1 \
-		--password-file consensus/validator_keys_$1/password.txt \
+		--directory ${ValidatorKeys[$1]} \
+		--password-file ${ValidatorKeys[$1]}/password.txt \
 		--reuse-password
 }
 	
 function RunValidator()
 {
 
-	RunInBackground ./logs/validator_$1.log lighthouse vc --allow-unsynced \
+	RunInBackground ./logs/validator_$1.log lighthouse vc \
 		--testnet-dir "./data/testnet" \
 		--datadir "data/validator/$1" \
 		--beacon-nodes http://localhost:$((5052 + $1)) \
@@ -342,16 +344,7 @@ function RunValidator()
 		--suggested-fee-recipient ${Accounts[$1]} 
 		#--beacon-nodes
 		#--unencrypted-http-transport
-	
-	return
-	
-	RunInBackground ./logs/validator_$1.log lighthouse \
-		vc \
-		--datadir ${@:$OPTIND:1} \
-		--testnet-dir $TESTNET_DIR \
-		--init-slashing-protection \
-		--beacon-nodes ${@:$OPTIND+1:1} \
-		$VC_ARGS	
+		#--allow-unsynced
 }
 function RunValidator_Prysm()
 {
@@ -386,14 +379,14 @@ function CreateWallet_Prysm() {
 		--account-password-file=consensus/validator_keys_$1/password.txt
 }
 function RunStaker {
-	echo {\"keys\":$(cat `ls -rt /root/validator_keys1/deposit_data* | tail -n 1`), \"address\":\"0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f\", \"privateKey\": \"0x28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf\"} > /root/validator_keys1/payload.txt
+	echo {\"keys\":$(cat `ls -rt /root/validator_keys1/deposit_data* | tail -n 1`), \"address\":\"${Accounts[1]}\", \"privateKey\": \"${PrivateKeys[1]}\"} > /root/validator_keys1/payload.txt
 	
 	curl -X POST -H "Content-Type: application/json" -d @/root/validator_keys1/payload.txt http://localhost:8005/api/account/stake
 
 	nohup clients/lodestar validator \
 	  --dataDir "./data/consensus/1" \
 	  --beaconNodes "http://127.0.0.1:9597" \
-	  --suggestedFeeRecipient "0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" \
+	  --suggestedFeeRecipient "${Accounts[1]}" \
 	  --graffiti "YOLO MERGEDNET GETH LODESTAR" \
 	  --paramsFile "./consensus/config.yml" \
 	  --importKeystores "/root/validator_keys1" \
@@ -422,9 +415,9 @@ function CreateValidator {
 }
 function MakeDeposit {
 	Log "Making Deposit for the Validators"
-	echo {\"keys\":$(cat `ls -rt consensus/validator_keys/deposit_data* | tail -n 1`), \"address\":\"0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f\", \"privateKey\": \"0x28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf\"} > consensus/validator_keys/payload.txt
+	echo {\"keys\":$(cat `ls -rt ${ValidatorKeys[$1]}/deposit_data* | tail -n 1`), \"address\":\"${Accounts[$1]}\", \"privateKey\": \"${PrivateKeys[$1]}\"} > ${ValidatorKeys[$1]}/payload.txt
 
-	curl -X POST -H "Content-Type: application/json" -d @consensus/validator_keys/payload.txt http://localhost:8005/api/account/stake
+	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://localhost:8005/api/account/stake
 	echo
 }
 function ExtractENR {
@@ -441,6 +434,7 @@ function ExtractENR {
 }
 function WaitForPosTransition {
 	Log "Waiting for POS Transition at slot 32. This could take a while (6.4 minutes) ..."
+	date
 	local pos=''
 	while [[ -z $pos ]]
 	do
@@ -448,6 +442,7 @@ function WaitForPosTransition {
 		pos=`cat logs/beacon_0.log | grep "Proof of Stake Activated" || :`
 	done
 	echo $pos
+	date
 }
 #git clone https://github.com/q9f/mergednet.git
 #cd mergednet
@@ -490,6 +485,7 @@ RunValidator 0 # validator is needed to move to pos
 
 WaitForPosTransition
 
+MakeDeposit 1
 ImportValidator 1
 RunValidator 1
 
