@@ -92,7 +92,7 @@ function ImportGethAccount()
 {
 	Log Importing Account ${Accounts[$1]}
 	echo "password" > data/execution/geth_password.txt
-	echo ${PrivateKeys[0]} > data/execution/account_geth_privateKey
+	echo ${PrivateKeys[$1]} > data/execution/account_geth_privateKey
 	geth --datadir=data/execution/$1 account import --password data/execution/geth_password.txt data/execution/account_geth_privateKey
 }
 function RunInBackground {
@@ -200,10 +200,9 @@ function GenerateGenesisSSZ()
 }
 function RunBeacon() {
 	Log "Running Beacon $1"
-	local bootnodes=`cat consensus/bootnodes.txt 2>/dev/null | grep . | tr '\n' ',' | sed s/,$//g`
-	echo "Beacon Bootnodes = $bootnodes"
-	
+	local bootnodes=`cat consensus/bootnodes.txt 2>/dev/null | grep . | tr '\n' ',' | sed s/,$//g`	
 	if [[ ! -z $bootnodes ]]; then
+		echo "Beacon Bootnodes = $bootnodes"
 		local bootnodes_command="--boot-nodes=$bootnodes"
 	fi
 	RunInBackground ./logs/beacon_$1.log lighthouse beacon \
@@ -434,7 +433,6 @@ function ExtractENR {
 }
 function WaitForPosTransition {
 	Log "Waiting for POS Transition at slot 32. This could take a while (6.4 minutes) ..."
-	date
 	local pos=''
 	while [[ -z $pos ]]
 	do
@@ -442,7 +440,6 @@ function WaitForPosTransition {
 		pos=`cat logs/beacon_0.log | grep "Proof of Stake Activated" || :`
 	done
 	echo $pos
-	date
 }
 #git clone https://github.com/q9f/mergednet.git
 #cd mergednet
@@ -454,7 +451,7 @@ AdjustTimestamps
 for i in $(seq 0 $(($NodesCount-1))); do
 	InitGeth $i
 	if [[ $i == 0 ]]; then
-		ImportGethAccount
+		ImportGethAccount $i
 	fi
 	RunGeth $i
 done
@@ -483,7 +480,7 @@ sleep 5
 ImportValidator 0
 RunValidator 0 # validator is needed to move to pos
 
-WaitForPosTransition
+time WaitForPosTransition
 
 MakeDeposit 1
 ImportValidator 1
