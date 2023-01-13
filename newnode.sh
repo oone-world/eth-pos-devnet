@@ -1,8 +1,9 @@
 NodesCount=1
 LogLevel=info
-Accounts=("0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" "0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
-PrivateKeys=("28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf" "8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
+Accounts=("0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
+PrivateKeys=("8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
 ValidatorKeys=("../validator_keys8" "../validator_keys8_2")
+ServerIP=adigium2.innuva.com
 ######## Checker Functions
 function Log() {
 	echo
@@ -52,7 +53,7 @@ function PrepareEnvironment() {
 	KillAll
 	
 	git clean -fxd
-	rm execution/bootnodes.txt consensus/bootnodes.txt
+	#rm execution/bootnodes.txt consensus/bootnodes.txt
 
 	test -d logs || mkdir logs
 	test -d data || mkdir data
@@ -83,10 +84,6 @@ function RunGeth()
 	Log "Running geth $1 on port $((8551 + $1))"
 	local bootnodes=$(cat execution/bootnodes.txt 2>/dev/null | tr '\n' ',' | sed s/,$//g)
 	echo "Geth Bootnodes = $bootnodes"
-	local unlock_account=
-	if [[ $1 == 0 ]]; then
-		local unlock_account="--allow-insecure-unlock --unlock=${Accounts[$1]} --password=data/execution/geth_password.txt --mine"
-	fi
 	RunInBackground ./logs/geth_$1.log geth \
 		--http \
 		--http.port $((8545 + $1)) \
@@ -94,20 +91,16 @@ function RunGeth()
 		--http.addr=0.0.0.0 \
 		--http.vhosts=* \
 		--http.corsdomain=* \
-		$unlock_account \
 	  --networkid 32382 \
 	  --datadir "./data/execution/$1" \
 	  --authrpc.port $((8551 + $1)) \
 	  --port $((30303 + $1)) \
 	  --syncmode full \
 	  --bootnodes=$bootnodes
-	sleep 1 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
-	#local variablename="bootnode_geth_$1"
-	#export $variablename=`geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//`
-	#Log "$variablename = ${!variablename}"
-	#echo ${!variablename} >> execution/bootnodes.txt
+	sleep 5 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
+
 	local my_enode=$(geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//)
-	echo $my_enode >> execution/bootnodes.txt
+	#echo $my_enode >> execution/bootnodes.txt
 }
 function RunBeacon() {
 	Log "Running Beacon $1"
@@ -158,7 +151,7 @@ function ImportValidator()
 		--password-file ${ValidatorKeys[$1]}/password.txt \
 		--reuse-password
 }
-	
+
 function RunValidator()
 {
 
@@ -176,7 +169,7 @@ function MakeDeposit {
 	Log "Making Deposit for the Validators"
 	echo {\"keys\":$(cat `ls -rt ${ValidatorKeys[$1]}/deposit_data* | tail -n 1`), \"address\":\"${Accounts[$1]}\", \"privateKey\": \"${PrivateKeys[$1]}\"} > ${ValidatorKeys[$1]}/payload.txt
 
-	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://localhost:8005/api/account/stake
+	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://$ServerIP:8005/api/account/stake
 	echo
 }
 function ExtractENR {
