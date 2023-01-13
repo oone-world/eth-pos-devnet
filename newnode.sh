@@ -109,10 +109,6 @@ function RunGeth()
 	local my_enode=$(geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//)
 	echo $my_enode >> execution/bootnodes.txt
 }
-function UseInitialContract {
-	deposit_contract_address=0x4242424242424242424242424242424242424242
-	deposit_contract_block_number=0
-}
 function RunBeacon() {
 	Log "Running Beacon $1"
 	local bootnodes=`cat consensus/bootnodes.txt 2>/dev/null | grep . | tr '\n' ',' | sed s/,$//g`	
@@ -195,21 +191,10 @@ function ExtractENR {
 	echo $my_enr >> consensus/bootnodes.txt
 
 }
-function WaitForPosTransition {
-	Log "Waiting for POS Transition at slot 32. This could take a while (6.4 minutes) ..."
-	local pos=''
-	while [[ -z $pos ]]
-	do
-		sleep 10
-		pos=`cat logs/beacon_0.log | grep "Proof of Stake Activated" || :`
-	done
-	echo $pos
-}
 
 PrepareEnvironment
 set -e
 
-UseInitialContract
 for i in $(seq 0 $(($NodesCount-1))); do
 	InitGeth $i
 	RunGeth $i
