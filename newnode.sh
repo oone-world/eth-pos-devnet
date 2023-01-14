@@ -1,9 +1,9 @@
 NodesCount=1
 LogLevel=info
-Accounts=("0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
-PrivateKeys=("8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
-ValidatorKeys=("../validator_keys8" "../validator_keys8_2")
-ServerIP=adigium2.innuva.com
+Accounts=("0x90e0d0b7d7CdBb79934f5B1F81efAC5689142775")
+PrivateKeys=("d3700254fff9826427d913eb3459dba36fdc99946f01b0e42b71ef930f106d05")
+ValidatorKeys=("../validator_keys8_3" "../validator_keys8_4")
+ServerIP=173.255.232.232
 ######## Checker Functions
 function Log() {
 	echo
@@ -12,22 +12,21 @@ function Log() {
 function CheckGeth()
 {
 	Log "Checking Geth $1"
-	test -z $my_ip && my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
 	geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//
-	echo Peers: `geth attach --exec "admin.peers" data/execution/$1/geth.ipc | grep "remoteAddress" | grep -e $my_ip -e "127.0.0.1"`
+	echo Peers: `geth attach --exec "admin.peers" data/execution/$1/geth.ipc | grep "remoteAddress" | grep -e $my_ip -e "127.0.0.1" -e $ServerIP`
 	echo Block Number: `geth attach --exec "eth.blockNumber" data/execution/$1/geth.ipc`
 }
 function CheckBeacon()
 {
 	Log "Checking Beacon $1"
-	#curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
-	echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
-	echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
-	echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
-	curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
+	#echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
+	#echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
+	#echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
+	#curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
 }
 function CheckAll()
 {
@@ -77,6 +76,8 @@ function RunInBackground {
 	local LogFile=$1
 	shift
 	echo "Running Command in Background: $@ > $LogFile &"
+	date >> logs/commands.log
+	echo "nohup $@ > $LogFile &" >> logs/commands.log
 	nohup $@ > $LogFile &
 }
 function RunGeth()
@@ -119,7 +120,6 @@ function RunBeacon() {
 		--eth1 \
 		--staking \
 		--enable-private-discovery \
-		--enr-address 127.0.0.1 \
 		--enr-udp-port $((9000 + $1)) \
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
