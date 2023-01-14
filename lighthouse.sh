@@ -99,6 +99,8 @@ function RunInBackground {
 	local LogFile=$1
 	shift
 	echo "Running Command in Background: $@ > $LogFile &"
+	date >> logs/commands.log
+	echo "nohup $@ > $LogFile &" >> logs/commands.log
 	nohup $@ > $LogFile &
 }
 function RunGeth()
@@ -215,7 +217,7 @@ function RunBeacon() {
 		--eth1 \
 		--staking \
 		--enable-private-discovery \
-		--enr-address 127.0.0.1 \
+		--enr-address $my_ip \
 		--enr-udp-port $((9000 + $1)) \
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
@@ -413,7 +415,7 @@ function CreateValidator {
         --wallets-dir data/wallet_dir/wallets		
 }
 function MakeDeposit {
-	Log "Making Deposit for the Validators"
+	Log "Making Deposit for the Validators $1"
 	echo {\"keys\":$(cat `ls -rt ${ValidatorKeys[$1]}/deposit_data* | tail -n 1`), \"address\":\"${Accounts[$1]}\", \"privateKey\": \"${PrivateKeys[$1]}\"} > ${ValidatorKeys[$1]}/payload.txt
 
 	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://localhost:8005/api/account/stake
