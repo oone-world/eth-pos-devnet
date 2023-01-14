@@ -111,6 +111,8 @@ function RunGeth()
 	local unlock_account=
 	if [[ $1 == 0 ]]; then
 		local unlock_account="--allow-insecure-unlock --unlock=${Accounts[$1]} --password=data/execution/geth_password.txt --mine"
+	else
+		local genesis_block_check="--eth.requiredblocks 0=$genesis_hash"
 	fi
 	RunInBackground ./logs/geth_$1.log geth \
 		--http \
@@ -119,11 +121,12 @@ function RunGeth()
 		--http.addr=0.0.0.0 \
 		--http.vhosts=* \
 		--http.corsdomain=* \
-		$unlock_account \
+		$unlock_account $genesis_block_check\
 	  --networkid 32382 \
 	  --datadir "./data/execution/$1" \
 	  --authrpc.port $((8551 + $1)) \
 	  --port $((30303 + $1)) \
+	  --discovery.port $((30303 + $1)) \
 	  --syncmode full \
 	  --bootnodes=$bootnodes
 	sleep 1 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
@@ -135,7 +138,7 @@ function RunGeth()
 	echo $my_enode >> execution/bootnodes.txt
 }
 function StoreGethHash() {
-	genesis_hash=`geth attach --exec "eth.getBlockByNumber(0).hash" data/execution/1/geth.ipc | sed s/^\"// | sed s/\"$//`
+	genesis_hash=`geth attach --exec "eth.getBlockByNumber(0).hash" data/execution/0/geth.ipc | sed s/^\"// | sed s/\"$//`
 
 	echo $genesis_hash > execution/genesis_hash.txt
 	echo $genesis_hash > consensus/deposit_contract_block.txt
@@ -167,7 +170,7 @@ function CreateBeaconTestNetConfig {
 		--testnet-dir data/testnet \
 		--deposit-contract-address $deposit_contract_address \
 		--deposit-contract-deploy-block $deposit_contract_block_number \
-		--eth1-follow-distance 1 \
+		--eth1-follow-distance 10 \
 		--min-deposit-amount 10000000 \
 		--force \
 		--altair-fork-epoch 0 \
@@ -177,7 +180,6 @@ function CreateBeaconTestNetConfig {
 		--min-genesis-active-validator-count 8 \
 		--min-genesis-time $timestamp \
 		--spec mainnet \
-		--seconds-per-slot 6\
 		--eth1-id 32382
 	
 	sed -i s/TERMINAL_TOTAL_DIFFICULTY.*/'TERMINAL_TOTAL_DIFFICULTY: 64'/g data/testnet/config.yaml
@@ -456,9 +458,11 @@ for i in $(seq 0 $(($NodesCount-1))); do
 		ImportGethAccount $i
 	fi
 	RunGeth $i
+	if [[ $i == 0 ]]; then
+		StoreGethHash
+	fi
 done
 
-#StoreGethHash
 #DeployContract
 UseInitialContract
 
