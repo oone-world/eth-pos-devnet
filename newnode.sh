@@ -1,7 +1,7 @@
-NodesCount=1
+NodesCount=2
 LogLevel=info
-Accounts=("0x90e0d0b7d7CdBb79934f5B1F81efAC5689142775")
-PrivateKeys=("d3700254fff9826427d913eb3459dba36fdc99946f01b0e42b71ef930f106d05")
+Accounts=("0x90e0d0b7d7CdBb79934f5B1F81efAC5689142775" "0xe77ce92F67d19fCc00f68550746260d4DCbcAd0C")
+PrivateKeys=("d3700254fff9826427d913eb3459dba36fdc99946f01b0e42b71ef930f106d05" "c4cffa9dc5e4cf90374218b600c8366f74d96d1e7849ddbe336d6e36dec31fdd")
 ValidatorKeys=("../validator_keys8_3" "../validator_keys8_4")
 ServerIP=173.255.232.232
 ######## Checker Functions
@@ -85,6 +85,9 @@ function RunGeth()
 	Log "Running geth $1 on port $((8551 + $1))"
 	local bootnodes=$(cat execution/bootnodes.txt 2>/dev/null | tr '\n' ',' | sed s/,$//g)
 	echo "Geth Bootnodes = $bootnodes"
+	local genesis_hash=`cat execution/genesis_hash.txt`
+	echo "Geth genesis_hash = $genesis_hash"
+	
 	RunInBackground ./logs/geth_$1.log geth \
 		--http \
 		--http.port $((8545 + $1)) \
@@ -92,10 +95,12 @@ function RunGeth()
 		--http.addr=0.0.0.0 \
 		--http.vhosts=* \
 		--http.corsdomain=* \
+		--eth.requiredblocks 0=$genesis_hash \
 	  --networkid 32382 \
 	  --datadir "./data/execution/$1" \
 	  --authrpc.port $((8551 + $1)) \
 	  --port $((30303 + $1)) \
+	  --discovery.port $((30303 + $1)) \
 	  --syncmode full \
 	  --bootnodes=$bootnodes
 	sleep 5 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
@@ -154,7 +159,6 @@ function ImportValidator()
 
 function RunValidator()
 {
-
 	RunInBackground ./logs/validator_$1.log lighthouse vc \
 		--testnet-dir "./data/testnet" \
 		--datadir "data/validator/$1" \
