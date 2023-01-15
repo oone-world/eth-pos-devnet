@@ -1,62 +1,11 @@
-NodesCount=2
-LogLevel=debug
-Accounts=("0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" "0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
-PrivateKeys=("28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf" "8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
-ValidatorKeys=("../validator_keys8" "../validator_keys8_2")
-######## Checker Functions
+source Config.sh
 function Log() {
 	echo
 	echo "--> $@"
 }
-function CheckGeth()
-{
-	Log "Checking Geth $1"
-	test -z $my_ip && my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
-	geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//
-	echo Peers: `geth attach --exec "admin.peers" data/execution/$1/geth.ipc | grep "remoteAddress" | grep -e $my_ip -e "127.0.0.1"`
-	echo Block Number: `geth attach --exec "eth.blockNumber" data/execution/$1/geth.ipc`
-}
-function CheckBeacon()
-{
-	Log "Checking Beacon $1"
-	#curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
-	echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
-	echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
-	echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
-	curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
-}
-function CheckBeacon_Prysm()
-{
-	Log "Checking Beacon $1"
-	curl localhost:$((8000 + $1))/p2p
-	curl http://localhost:$((8000 + $1))/healthz
-	curl http://localhost:$((3500 + $1))/eth/v1/node/syncing 2>/dev/null | jq
-}
-function CheckAll()
-{
-	for i in $(seq 0 $(($NodesCount-1))); do
-		CheckGeth $i
-	done
-	for i in $(seq 0 $(($NodesCount-1))); do
-		CheckBeacon $i
-	done
-}
-########
-
-function KillAll() {
-	Log "Kill All Apps"
-	killall geth beacon-chain validator
-	pkill -f ./prysm.*
-	pkill -f lodestar.js
-	pkill -f lighthouse
-	docker compose -f /home/adigium/eth-pos-devnet/docker-run.yml down || echo Looks like docker is not running.
-}
 function PrepareEnvironment() {
 	Log "Cleaning Environment"
-	KillAll
+	./KillAll.sh
 	
 	git clean -fxd
 	rm execution/bootnodes.txt consensus/bootnodes.txt
@@ -228,7 +177,7 @@ function RunBeacon() {
 		"$bootnodes_command"
 	return
 	
-	echo Waiting for Beacon enr ...
+	echo Waiting for Beacon enr, when validators are imported ...
 	local my_enr=''
 	while [[ -z $my_enr ]]
 	do
@@ -440,8 +389,10 @@ function WaitForPosTransition {
 	local pos=''
 	while [[ -z $pos ]]
 	do
-		sleep 10
+		sleep 12
 		pos=`cat logs/beacon_0.log | grep "Proof of Stake Activated" || :`
+		local slot=$(cat logs/beacon_0.log | grep "slot: " | tail -1 | sed s/'.*slot: '//g | sed s/,.*//g)
+		echo "Slot = $slot"
 	done
 	echo $pos
 }
@@ -495,17 +446,4 @@ RunValidator 1
 #RunStaker
 
 
-CheckAll
-
-echo "
-clear && tail -f logs/geth_0.log -n1000
-clear && tail -f logs/geth_1.log -n1000
-clear && tail -f logs/beacon_0.log -n1000
-clear && tail -f logs/beacon_1.log -n1000
-clear && tail -f logs/validator_0.log -n1000
-clear && tail -f logs/validator_1.log -n1000
-
-curl http://localhost:9596/eth/v1/node/identity | jq
-curl http://localhost:9596/eth/v1/node/peers | jq
-curl http://localhost:9596/eth/v1/node/syncing | jq
-"
+./CheckAll.sh
