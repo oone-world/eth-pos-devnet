@@ -90,9 +90,9 @@ function InitGeth()
 }
 function ImportGethAccount()
 {
-	Log Importing Account ${Accounts[$1]}
+	Log Importing Account 0x35040f81127Fd55126b14eCbD6bb7aDC4777101f
 	echo "password" > data/execution/geth_password.txt
-	echo ${PrivateKeys[$1]} > data/execution/account_geth_privateKey
+	echo "3ad587894796b0eb628d1c6e1d81ac64d54b6f6d00121aba3ececa6a9c73dead" > data/execution/account_geth_privateKey
 	geth --datadir=data/execution/$1 account import --password data/execution/geth_password.txt data/execution/account_geth_privateKey
 }
 function RunInBackground {
@@ -110,7 +110,7 @@ function RunGeth()
 	echo "Geth Bootnodes = $bootnodes"
 	local unlock_account=
 	if [[ $1 == 0 ]]; then
-		local unlock_account="--allow-insecure-unlock --unlock=${Accounts[$1]} --password=data/execution/geth_password.txt --mine"
+		local unlock_account="--allow-insecure-unlock --mine --unlock=0x35040f81127Fd55126b14eCbD6bb7aDC4777101f --password=data/execution/geth_password.txt"
 	else
 		local genesis_block_check="--eth.requiredblocks 0=$genesis_hash"
 	fi
