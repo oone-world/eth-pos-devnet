@@ -125,6 +125,7 @@ function RunBeacon() {
 		--eth1 \
 		--staking \
 		--enable-private-discovery \
+		--enr-address $my_ip \
 		--enr-udp-port $((9000 + $1)) \
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
