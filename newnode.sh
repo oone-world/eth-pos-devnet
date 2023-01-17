@@ -1,8 +1,9 @@
-NodesCount=1
+NodesCount=2
 LogLevel=info
-Accounts=("0xF359C69a1738F74C044b4d3c2dEd36c576A34d9f" "0x88cfFd22aE99E4f7f1bC794E591BcB85b421B522")
-PrivateKeys=("28fb2da825b6ad656a8301783032ef05052a2899a81371c46ae98965a6ecbbaf" "8b742d27695dc12d89922df3e7fb99e2b0f898db67e25d2c00c81725bf17eb86")
-ValidatorKeys=("../validator_keys8" "../validator_keys8_2")
+Accounts=("0x90e0d0b7d7CdBb79934f5B1F81efAC5689142775" "0xe77ce92F67d19fCc00f68550746260d4DCbcAd0C")
+PrivateKeys=("d3700254fff9826427d913eb3459dba36fdc99946f01b0e42b71ef930f106d05" "c4cffa9dc5e4cf90374218b600c8366f74d96d1e7849ddbe336d6e36dec31fdd")
+ValidatorKeys=("../validator_keys8_3" "../validator_keys8_4")
+ServerIP=173.255.232.232
 ######## Checker Functions
 function Log() {
 	echo
@@ -11,22 +12,21 @@ function Log() {
 function CheckGeth()
 {
 	Log "Checking Geth $1"
-	test -z $my_ip && my_ip=`curl ifconfig.me 2>/dev/null` && Log "my_ip=$my_ip"
 	geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//
-	echo Peers: `geth attach --exec "admin.peers" data/execution/$1/geth.ipc | grep "remoteAddress" | grep -e $my_ip -e "127.0.0.1"`
+	echo Peers: `geth attach --exec "admin.peers" data/execution/$1/geth.ipc | grep "remoteAddress" | grep -e $my_ip -e "127.0.0.1" -e $ServerIP`
 	echo Block Number: `geth attach --exec "eth.blockNumber" data/execution/$1/geth.ipc`
 }
 function CheckBeacon()
 {
 	Log "Checking Beacon $1"
-	#curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
-	#curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
-	echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
-	echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
-	echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
-	curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/identity 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/peers 2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/syncing	2>/dev/null | jq
+	curl http://localhost:$((5052+$1))/eth/v1/node/health 2>/dev/null | jq
+	#echo My ID: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.peer_id"`
+	#echo My enr: `curl http://localhost:$((5052 + $1))/eth/v1/node/identity 2>/dev/null | jq -r ".data.enr"`
+	#echo Peer Count: `curl http://localhost:$((5052 + $1))/eth/v1/node/peers 2>/dev/null | jq -r ".meta.count"`
+	#curl http://localhost:$((5052 + $1))/eth/v1/node/syncing 2>/dev/null | jq
 }
 function CheckAll()
 {
@@ -52,7 +52,7 @@ function PrepareEnvironment() {
 	KillAll
 	
 	git clean -fxd
-	rm execution/bootnodes.txt consensus/bootnodes.txt
+	#rm execution/bootnodes.txt consensus/bootnodes.txt
 
 	test -d logs || mkdir logs
 	test -d data || mkdir data
@@ -76,6 +76,8 @@ function RunInBackground {
 	local LogFile=$1
 	shift
 	echo "Running Command in Background: $@ > $LogFile &"
+	date >> logs/commands.log
+	echo "nohup $@ > $LogFile &" >> logs/commands.log
 	nohup $@ > $LogFile &
 }
 function RunGeth()
@@ -83,10 +85,9 @@ function RunGeth()
 	Log "Running geth $1 on port $((8551 + $1))"
 	local bootnodes=$(cat execution/bootnodes.txt 2>/dev/null | tr '\n' ',' | sed s/,$//g)
 	echo "Geth Bootnodes = $bootnodes"
-	local unlock_account=
-	if [[ $1 == 0 ]]; then
-		local unlock_account="--allow-insecure-unlock --unlock=${Accounts[$1]} --password=data/execution/geth_password.txt --mine"
-	fi
+	local genesis_hash=`cat execution/genesis_hash.txt`
+	echo "Geth genesis_hash = $genesis_hash"
+	
 	RunInBackground ./logs/geth_$1.log geth \
 		--http \
 		--http.port $((8545 + $1)) \
@@ -94,20 +95,18 @@ function RunGeth()
 		--http.addr=0.0.0.0 \
 		--http.vhosts=* \
 		--http.corsdomain=* \
-		$unlock_account \
+		--eth.requiredblocks 0=$genesis_hash \
 	  --networkid 32382 \
 	  --datadir "./data/execution/$1" \
 	  --authrpc.port $((8551 + $1)) \
 	  --port $((30303 + $1)) \
+	  --discovery.port $((30303 + $1)) \
 	  --syncmode full \
 	  --bootnodes=$bootnodes
-	sleep 1 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
-	#local variablename="bootnode_geth_$1"
-	#export $variablename=`geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//`
-	#Log "$variablename = ${!variablename}"
-	#echo ${!variablename} >> execution/bootnodes.txt
+	sleep 5 # Set to 5 seconds to allow the geth to bind to the external IP before reading enode
+
 	local my_enode=$(geth attach --exec "admin.nodeInfo.enode" data/execution/$1/geth.ipc | sed s/^\"// | sed s/\"$//)
-	echo $my_enode >> execution/bootnodes.txt
+	#echo $my_enode >> execution/bootnodes.txt
 }
 function RunBeacon() {
 	Log "Running Beacon $1"
@@ -126,7 +125,7 @@ function RunBeacon() {
 		--eth1 \
 		--staking \
 		--enable-private-discovery \
-		--enr-address 127.0.0.1 \
+		--enr-address $my_ip \
 		--enr-udp-port $((9000 + $1)) \
 		--enr-tcp-port $((9000 + $1)) \
 		--port $((9000 + $1)) \
@@ -158,10 +157,9 @@ function ImportValidator()
 		--password-file ${ValidatorKeys[$1]}/password.txt \
 		--reuse-password
 }
-	
+
 function RunValidator()
 {
-
 	RunInBackground ./logs/validator_$1.log lighthouse vc \
 		--testnet-dir "./data/testnet" \
 		--datadir "data/validator/$1" \
@@ -176,7 +174,7 @@ function MakeDeposit {
 	Log "Making Deposit for the Validators"
 	echo {\"keys\":$(cat `ls -rt ${ValidatorKeys[$1]}/deposit_data* | tail -n 1`), \"address\":\"${Accounts[$1]}\", \"privateKey\": \"${PrivateKeys[$1]}\"} > ${ValidatorKeys[$1]}/payload.txt
 
-	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://localhost:8005/api/account/stake
+	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://$ServerIP:8005/api/account/stake
 	echo
 }
 function ExtractENR {
