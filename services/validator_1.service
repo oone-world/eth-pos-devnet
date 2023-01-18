@@ -1,0 +1,10 @@
+[Unit]
+Description=Validator 1
+[Service]
+ExecStart=/bin/bash /home/adigium/eth-pos-devnet/scripts/start_validator_1.sh
+StandardOutput=append:/home/adigium/eth-pos-devnet/logs/validator_1.log
+RemainAfterExit=no
+Restart=always
+RestartSec=5s
+[Install]
+WantedBy=default.target

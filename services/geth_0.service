@@ -1,0 +1,10 @@
+[Unit]
+Description=Geth 0
+[Service]
+ExecStart=/bin/bash /home/adigium/eth-pos-devnet/scripts/start_geth_0.sh
+StandardOutput=append:/home/adigium/eth-pos-devnet/logs/geth_0.log
+RemainAfterExit=no
+Restart=always
+RestartSec=5s
+[Install]
+WantedBy=default.target

@@ -18,14 +18,14 @@ function GatherBeaconBootnodes {
 	cat consensus/bootnodes.txt
 }
 function SendFiles {
-	scp /home/adigium/eth-pos-devnet/execution/genesis* root@adigium.innuva.com:/home/adigium/eth-pos-devnet/execution/
-	scp /home/adigium/eth-pos-devnet/execution/bootnodes.txt root@adigium.innuva.com:/home/adigium/eth-pos-devnet/execution/
+	scp /home/adigium/eth-pos-devnet/execution/genesis* root@adigium3.innuva.com:/root/eth-pos-devnet/execution/
+	scp /home/adigium/eth-pos-devnet/execution/bootnodes.txt root@adigium3.innuva.com:/root/eth-pos-devnet/execution/
 	
-	scp /home/adigium/eth-pos-devnet/consensus/bootnodes.txt root@adigium.innuva.com:/home/adigium/eth-pos-devnet/consensus/
+	scp /home/adigium/eth-pos-devnet/consensus/bootnodes.txt root@adigium3.innuva.com:/root/eth-pos-devnet/consensus/
 	
-	scp /home/adigium/eth-pos-devnet/data/testnet/* root@adigium.innuva.com:/home/adigium/eth-pos-devnet/data/testnet/
+	scp /home/adigium/eth-pos-devnet/data/testnet/* root@adigium3.innuva.com:/root/eth-pos-devnet/data/testnet/
 }
 
-GatherGethBootnodes
-GatherBeaconBootnodes
+#GatherGethBootnodes
+#GatherBeaconBootnodes
 SendFiles

@@ -1,0 +1,10 @@
+[Unit]
+Description=Beacon 1
+[Service]
+ExecStart=/bin/bash /home/adigium/eth-pos-devnet/scripts/start_beacon_1.sh
+StandardOutput=append:/home/adigium/eth-pos-devnet/logs/beacon_1.log
+RemainAfterExit=no
+Restart=always
+RestartSec=5s
+[Install]
+WantedBy=default.target
