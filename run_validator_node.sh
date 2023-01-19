@@ -1,6 +1,5 @@
-Accounts=("0x635B266Ab9a3B570d039736Fbe9404a2e0f99A27")
-PrivateKeys=("f72b2773140b061309067dfe9c3747d327877a6a19c7e2e6fadb90dd87e48254")
-ValidatorKeys=("../validator_keys")
+Account_public_address=("0x635B266Ab9a3B570d039736Fbe9404a2e0f99A27")
+Validator_keys_path=("../validator_keys")
 
 NodesCount=1
 LogLevel=info
@@ -155,9 +154,7 @@ function ImportValidator()
 	lighthouse account validator import \
 		--testnet-dir "./data/testnet" \
 		--datadir "data/validator/$1" \
-		--directory ${ValidatorKeys[$1]} \
-		--password-file ${ValidatorKeys[$1]}/password.txt \
-		--reuse-password
+		--directory ${Validator_keys_path[$1]}
 }
 
 function RunValidator()
@@ -167,17 +164,10 @@ function RunValidator()
 		--datadir "data/validator/$1" \
 		--beacon-nodes http://localhost:$((5052 + $1)) \
 		--graffiti "ProducedBy_Validator_$1" \
-		--suggested-fee-recipient ${Accounts[$1]} 
+		--suggested-fee-recipient ${Account_public_address[$1]} 
 		#--beacon-nodes
 		#--unencrypted-http-transport
 		#--allow-unsynced
-}
-function MakeDeposit {
-	Log "Making Deposit for the Validators"
-	echo {\"keys\":$(cat `ls -rt ${ValidatorKeys[$1]}/deposit_data* | tail -n 1`), \"address\":\"${Accounts[$1]}\", \"privateKey\": \"${PrivateKeys[$1]}\"} > ${ValidatorKeys[$1]}/payload.txt
-
-	curl -X POST -H "Content-Type: application/json" -d @${ValidatorKeys[$1]}/payload.txt http://$ServerIP:8005/api/account/stake
-	echo
 }
 function ExtractENR {
 	Log Waiting for Beacon enr ...
@@ -199,7 +189,6 @@ for i in $(seq 0 $(($NodesCount-1))); do
 	InitGeth $i
 	RunGeth $i
 	RunBeacon $i
-	MakeDeposit $i
 	ImportValidator $i
 	RunValidator $i
 done
@@ -210,7 +199,6 @@ echo "
 clear && tail -f logs/geth_0.log -n1000
 clear && tail -f logs/beacon_0.log -n1000
 clear && tail -f logs/validator_0.log -n1000
-
 curl http://localhost:9596/eth/v1/node/identity | jq
 curl http://localhost:9596/eth/v1/node/peers | jq
 curl http://localhost:9596/eth/v1/node/syncing | jq
